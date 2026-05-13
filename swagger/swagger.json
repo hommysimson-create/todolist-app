@@ -1,0 +1,1288 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TodoListApp API",
+    "description": "인증된 사용자가 카테고리별로 할일을 등록·관리하는 TodoListApp의 REST API 명세입니다.\n\n## 인증 방식\nJWT Bearer Token을 사용합니다. 로그인(`POST /api/auth/login`) 후 발급되는 `accessToken`을 모든 인증 필요 API의 `Authorization` 헤더에 `Bearer {accessToken}` 형식으로 전달합니다.\n\n## 에러 응답 형식\n모든 에러 응답은 아래 형식을 따릅니다:\n```json\n{ \"status\": 400, \"message\": \"제목은 필수입니다.\" }\n```\n\n## 비즈니스 규칙 요약\n- **BR-03**: 사용자는 자신의 할일만 접근 가능\n- **BR-04**: 할일 등록 시 카테고리 선택 필수\n- **BR-05**: 할일 설명(description), 종료 예정일(dueDate)은 선택 입력\n- **BR-06**: 완료 상태에서도 수정·취소 가능 (isCompleted 토글)\n- **BR-07**: 기본 카테고리는 user_id가 NULL이며 모든 사용자 공유\n- **BR-09**: 사용자 정의 카테고리는 해당 사용자에게만 노출\n- **BR-10**: 할일이 연결된 카테고리는 삭제 불가\n- **BR-12**: 이메일은 변경 불가",
+    "version": "1.0.0",
+    "contact": {
+      "name": "aliceKim",
+      "email": "seojin10270@gmail.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "로컬 개발 서버"
+    }
+  ],
+  "tags": [
+    {
+      "name": "인증",
+      "description": "회원가입 및 로그인 (JWT 발급) 관련 API"
+    },
+    {
+      "name": "사용자",
+      "description": "내 정보 조회·수정·회원 탈퇴 관련 API"
+    },
+    {
+      "name": "할일",
+      "description": "할일 등록·조회·수정·삭제·완료 토글 관련 API"
+    },
+    {
+      "name": "카테고리",
+      "description": "카테고리 조회·추가·삭제 관련 API"
+    }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["인증"],
+        "operationId": "register",
+        "summary": "회원가입",
+        "description": "신규 사용자 계정을 생성합니다.\n\n**관련 유스케이스**: UC-01\n\n**처리 순서**: 입력값 유효성 검사 → 이메일 중복 확인 → 비밀번호 bcrypt 해시 저장 → 계정 생성\n\n**비밀번호 정책**: 최소 8자 이상 (SCN-13 참조)\n\n**관련 시나리오**: SCN-01 (정상), SCN-12 (중복 이메일), SCN-13 (비밀번호 8자 미만)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              },
+              "examples": {
+                "정상 요청": {
+                  "summary": "유효한 회원가입 요청",
+                  "value": {
+                    "email": "minjun@example.com",
+                    "password": "securePass1!",
+                    "name": "김민준"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "회원가입 성공. 계정이 생성되었습니다.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                },
+                "examples": {
+                  "성공 응답": {
+                    "summary": "회원가입 완료",
+                    "value": {
+                      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1NTBiMjgwYS1kNjZkLTQ2YzItOWYzNC1hYzNiMTIzNDU2NzgiLCJpYXQiOjE3MTU1NjgwMDAsImV4cCI6MTcxNTU3MTYwMH0.example",
+                      "user": {
+                        "id": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                        "email": "minjun@example.com",
+                        "name": "김민준",
+                        "createdAt": "2026-05-13T09:00:00.000Z",
+                        "updatedAt": "2026-05-13T09:00:00.000Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["인증"],
+        "operationId": "login",
+        "summary": "로그인 (JWT 발급)",
+        "description": "이메일과 비밀번호로 로그인하고 JWT Access Token을 발급받습니다.\n\n**관련 유스케이스**: UC-02\n\n**JWT 만료 시간**: 1시간 (1h)\n\n**토큰 저장 방식**: 클라이언트는 발급된 토큰을 Zustand 메모리(authStore)에 저장합니다. localStorage·Cookie 미사용.\n\n**관련 시나리오**: SCN-02 (정상), SCN-14 (미가입 이메일), SCN-15 (비밀번호 불일치)\n\n**향후 확장**: OAuth 소셜 로그인(Google, Facebook) 추가 예정 (2차)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "examples": {
+                "정상 요청": {
+                  "summary": "유효한 로그인 요청",
+                  "value": {
+                    "email": "minjun@example.com",
+                    "password": "securePass1!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "로그인 성공. JWT Access Token이 반환됩니다.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                },
+                "examples": {
+                  "성공 응답": {
+                    "summary": "로그인 완료 및 토큰 발급",
+                    "value": {
+                      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1NTBiMjgwYS1kNjZkLTQ2YzItOWYzNC1hYzNiMTIzNDU2NzgiLCJpYXQiOjE3MTU1NjgwMDAsImV4cCI6MTcxNTU3MTYwMH0.example",
+                      "user": {
+                        "id": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                        "email": "minjun@example.com",
+                        "name": "김민준",
+                        "createdAt": "2026-05-13T09:00:00.000Z",
+                        "updatedAt": "2026-05-13T09:00:00.000Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": ["사용자"],
+        "operationId": "getMe",
+        "summary": "내 정보 조회",
+        "description": "현재 인증된 사용자의 정보를 조회합니다. 비밀번호 필드는 응답에서 제외됩니다.\n\n**관련 유스케이스**: UC-03 사전 조건\n\n**관련 시나리오**: SCN-03 (정상), SCN-16 (JWT 만료)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "내 정보 반환 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "examples": {
+                  "성공 응답": {
+                    "summary": "사용자 정보 조회 결과",
+                    "value": {
+                      "id": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                      "email": "minjun@example.com",
+                      "name": "김민준",
+                      "createdAt": "2026-05-13T09:00:00.000Z",
+                      "updatedAt": "2026-05-13T09:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["사용자"],
+        "operationId": "updateMe",
+        "summary": "내 정보 수정 (이름, 비밀번호)",
+        "description": "현재 인증된 사용자의 이름 또는 비밀번호를 수정합니다.\n\n**관련 유스케이스**: UC-03\n\n**수정 가능 필드**: 이름(name), 비밀번호(password)\n\n**수정 불가 필드**: 이메일 — BR-12 적용 (이메일은 로그인 식별자로 변경 불가)\n\n**비밀번호 정책**: 최소 8자 이상\n\n**관련 시나리오**: SCN-03 (정상), SCN-16 (JWT 만료)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              },
+              "examples": {
+                "이름 수정": {
+                  "summary": "이름만 수정",
+                  "value": {
+                    "name": "민준킴"
+                  }
+                },
+                "비밀번호 수정": {
+                  "summary": "비밀번호만 수정",
+                  "value": {
+                    "password": "newPassword123!"
+                  }
+                },
+                "이름 + 비밀번호 수정": {
+                  "summary": "이름과 비밀번호 동시 수정",
+                  "value": {
+                    "name": "민준킴",
+                    "password": "newPassword123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "내 정보 수정 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "examples": {
+                  "성공 응답": {
+                    "summary": "수정된 사용자 정보 반환",
+                    "value": {
+                      "id": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                      "email": "minjun@example.com",
+                      "name": "민준킴",
+                      "createdAt": "2026-05-13T09:00:00.000Z",
+                      "updatedAt": "2026-05-13T10:30:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["사용자"],
+        "operationId": "deleteMe",
+        "summary": "회원 탈퇴",
+        "description": "현재 인증된 사용자 계정과 모든 관련 데이터를 즉시 삭제합니다.\n\n**관련 유스케이스**: UC-11\n\n**삭제 범위**: 사용자 계정, 할일(CASCADE DELETE), 사용자 정의 카테고리(CASCADE DELETE)\n\n**탈퇴 후 처리**: 보유 중이던 JWT는 즉시 무효 처리됩니다.\n\n**관련 시나리오**: SCN-11 (정상), SCN-24 (미인증)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "회원 탈퇴 성공. 응답 본문 없음."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/todos": {
+      "get": {
+        "tags": ["할일"],
+        "operationId": "getTodos",
+        "summary": "할일 목록 조회",
+        "description": "현재 인증된 사용자의 할일 목록을 조회합니다. 필터 쿼리 파라미터를 조합하여 원하는 조건의 할일만 조회할 수 있습니다.\n\n**관련 유스케이스**: UC-08\n\n**기본 정렬**: 등록일(createdAt) 내림차순\n\n**접근 제한**: BR-03 — 본인 소유 할일만 조회 가능\n\n**관련 시나리오**: SCN-08 (마감일 임박 필터링 조회)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "description": "필터링할 카테고리 ID (UUID). 지정 시 해당 카테고리의 할일만 반환합니다.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "description": "종료 예정일 필터 시작일 (ISO 8601 date 형식: YYYY-MM-DD). endDate와 함께 사용합니다.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-05-13"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "description": "종료 예정일 필터 종료일 (ISO 8601 date 형식: YYYY-MM-DD). startDate와 함께 사용합니다.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-05-17"
+          },
+          {
+            "name": "isCompleted",
+            "in": "query",
+            "required": false,
+            "description": "완료 여부 필터. `true`이면 완료된 할일만, `false`이면 미완료 할일만 반환합니다.",
+            "schema": {
+              "type": "boolean"
+            },
+            "example": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "할일 목록 조회 성공. 등록일 내림차순으로 정렬된 배열을 반환합니다.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Todo"
+                  }
+                },
+                "examples": {
+                  "목록 조회 결과": {
+                    "summary": "미완료 할일 목록",
+                    "value": [
+                      {
+                        "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
+                        "userId": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                        "categoryId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "title": "팀 주간 업무 보고서 작성",
+                        "description": "매주 금요일 오후 5시 마감",
+                        "dueDate": "2026-05-17",
+                        "isCompleted": false,
+                        "createdAt": "2026-05-13T09:30:00.000Z",
+                        "updatedAt": "2026-05-13T09:30:00.000Z"
+                      },
+                      {
+                        "id": "a9b8c7d6-e5f4-3210-fedc-ba9876543210",
+                        "userId": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                        "categoryId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                        "title": "코드 리뷰",
+                        "description": null,
+                        "dueDate": null,
+                        "isCompleted": false,
+                        "createdAt": "2026-05-13T08:00:00.000Z",
+                        "updatedAt": "2026-05-13T08:00:00.000Z"
+                      }
+                    ]
+                  },
+                  "빈 목록": {
+                    "summary": "조건에 맞는 할일 없음",
+                    "value": []
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["할일"],
+        "operationId": "createTodo",
+        "summary": "할일 등록",
+        "description": "새 할일을 등록합니다. 등록 시 `isCompleted`는 항상 `false`로 초기화됩니다.\n\n**관련 유스케이스**: UC-04\n\n**필수 입력**: 제목(title), 카테고리(categoryId) — BR-04\n\n**선택 입력**: 설명(description), 종료 예정일(dueDate) — BR-05\n\n**관련 시나리오**: SCN-04 (정상), SCN-17 (필수값 누락)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTodoRequest"
+              },
+              "examples": {
+                "마감일 포함": {
+                  "summary": "마감일이 있는 할일 등록",
+                  "value": {
+                    "title": "팀 주간 업무 보고서 작성",
+                    "categoryId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "description": "매주 금요일 오후 5시 마감",
+                    "dueDate": "2026-05-17"
+                  }
+                },
+                "최소 입력": {
+                  "summary": "필수값만 입력한 할일 등록",
+                  "value": {
+                    "title": "코드 리뷰",
+                    "categoryId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "할일 등록 성공. 생성된 할일 정보를 반환합니다.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                },
+                "examples": {
+                  "생성 결과": {
+                    "summary": "생성된 할일",
+                    "value": {
+                      "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
+                      "userId": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                      "categoryId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                      "title": "팀 주간 업무 보고서 작성",
+                      "description": "매주 금요일 오후 5시 마감",
+                      "dueDate": "2026-05-17",
+                      "isCompleted": false,
+                      "createdAt": "2026-05-13T09:30:00.000Z",
+                      "updatedAt": "2026-05-13T09:30:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/todos/{id}": {
+      "patch": {
+        "tags": ["할일"],
+        "operationId": "updateTodo",
+        "summary": "할일 수정",
+        "description": "지정한 할일의 내용을 수정합니다. 수정 요청 필드만 업데이트되며, 나머지 필드는 유지됩니다.\n\n**관련 유스케이스**: UC-05\n\n**수정 가능 필드**: 제목(title), 설명(description), 종료 예정일(dueDate), 카테고리(categoryId)\n\n**접근 제한**: BR-03 — 본인 소유 할일만 수정 가능\n\n**완료 상태 수정 가능**: BR-06 — 완료된 할일도 수정 가능\n\n**관련 시나리오**: SCN-05 (정상), SCN-18 (타인 할일 수정)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TodoId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTodoRequest"
+              },
+              "examples": {
+                "마감일 변경": {
+                  "summary": "마감일만 변경",
+                  "value": {
+                    "dueDate": "2026-05-18"
+                  }
+                },
+                "제목 + 카테고리 변경": {
+                  "summary": "제목과 카테고리 동시 변경",
+                  "value": {
+                    "title": "주간 보고서 작성 (수정)",
+                    "categoryId": "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "할일 수정 성공. 수정된 할일 정보를 반환합니다.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                },
+                "examples": {
+                  "수정 결과": {
+                    "summary": "수정된 할일",
+                    "value": {
+                      "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
+                      "userId": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                      "categoryId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                      "title": "팀 주간 업무 보고서 작성",
+                      "description": "매주 금요일 오후 5시 마감",
+                      "dueDate": "2026-05-18",
+                      "isCompleted": false,
+                      "createdAt": "2026-05-13T09:30:00.000Z",
+                      "updatedAt": "2026-05-13T11:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["할일"],
+        "operationId": "deleteTodo",
+        "summary": "할일 삭제",
+        "description": "지정한 할일을 삭제합니다. 완료된 할일도 삭제 가능합니다.\n\n**관련 유스케이스**: UC-06\n\n**접근 제한**: BR-03 — 본인 소유 할일만 삭제 가능\n\n**관련 시나리오**: SCN-06 (정상), SCN-19 (존재하지 않는 할일)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TodoId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "할일 삭제 성공. 응답 본문 없음."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/todos/{id}/complete": {
+      "patch": {
+        "tags": ["할일"],
+        "operationId": "completeTodo",
+        "summary": "완료 여부 토글",
+        "description": "지정한 할일의 완료 여부(`isCompleted`)를 토글합니다. 완료(true) ↔ 미완료(false) 간 전환됩니다.\n\n**관련 유스케이스**: UC-07\n\n**접근 제한**: BR-03 — 본인 소유 할일만 토글 가능\n\n**재토글 허용**: BR-06 — 완료 상태에서도 미완료로 취소 가능\n\n**관련 시나리오**: SCN-07 (정상), SCN-20 (타인 할일 완료 처리)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TodoId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "완료 여부 토글 성공. 토글된 할일 정보를 반환합니다.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                },
+                "examples": {
+                  "완료로 변경": {
+                    "summary": "미완료 → 완료 토글 결과",
+                    "value": {
+                      "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
+                      "userId": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                      "categoryId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                      "title": "팀 주간 업무 보고서 작성",
+                      "description": "매주 금요일 오후 5시 마감",
+                      "dueDate": "2026-05-17",
+                      "isCompleted": true,
+                      "createdAt": "2026-05-13T09:30:00.000Z",
+                      "updatedAt": "2026-05-13T14:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "tags": ["카테고리"],
+        "operationId": "getCategories",
+        "summary": "카테고리 목록 조회",
+        "description": "시스템 기본 카테고리(isDefault=true) 전체와 현재 인증된 사용자가 생성한 사용자 정의 카테고리(isDefault=false)를 함께 반환합니다.\n\n**관련 유스케이스**: UC-09 사전 조건\n\n**BR-07**: 기본 카테고리는 user_id=NULL, 모든 사용자 공유\n\n**BR-09**: 사용자 정의 카테고리는 요청자 본인의 것만 포함",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "카테고리 목록 조회 성공. 기본 카테고리 + 사용자 정의 카테고리 배열을 반환합니다.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                },
+                "examples": {
+                  "목록 조회 결과": {
+                    "summary": "기본 + 사용자 정의 카테고리 목록",
+                    "value": [
+                      {
+                        "id": "11111111-1111-1111-1111-111111111111",
+                        "userId": null,
+                        "name": "업무",
+                        "isDefault": true,
+                        "createdAt": "2026-05-01T00:00:00.000Z"
+                      },
+                      {
+                        "id": "22222222-2222-2222-2222-222222222222",
+                        "userId": null,
+                        "name": "개인",
+                        "isDefault": true,
+                        "createdAt": "2026-05-01T00:00:00.000Z"
+                      },
+                      {
+                        "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "userId": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                        "name": "사이드프로젝트",
+                        "isDefault": false,
+                        "createdAt": "2026-05-13T10:00:00.000Z"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["카테고리"],
+        "operationId": "createCategory",
+        "summary": "사용자 정의 카테고리 추가",
+        "description": "새 사용자 정의 카테고리를 생성합니다. 생성된 카테고리는 요청자에게만 노출됩니다.\n\n**관련 유스케이스**: UC-09\n\n**생성 규칙**: isDefault=false, userId=요청자 ID로 저장\n\n**BR-09**: 생성된 카테고리는 해당 사용자에게만 노출됨\n\n**중복 제한**: 동일 사용자 내 동일 이름의 카테고리 생성 불가 (UNIQUE(user_id, name))\n\n**관련 시나리오**: SCN-09 (정상), SCN-21 (중복 카테고리명)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryRequest"
+              },
+              "examples": {
+                "카테고리 생성": {
+                  "summary": "새 카테고리 추가",
+                  "value": {
+                    "name": "사이드프로젝트"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "카테고리 생성 성공. 생성된 카테고리 정보를 반환합니다.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "examples": {
+                  "생성 결과": {
+                    "summary": "생성된 카테고리",
+                    "value": {
+                      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                      "userId": "550b280a-d66d-46c2-9f34-ac3b12345678",
+                      "name": "사이드프로젝트",
+                      "isDefault": false,
+                      "createdAt": "2026-05-13T10:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/categories/{id}": {
+      "delete": {
+        "tags": ["카테고리"],
+        "operationId": "deleteCategory",
+        "summary": "사용자 정의 카테고리 삭제",
+        "description": "지정한 사용자 정의 카테고리를 삭제합니다. 연결된 할일이 없는 경우에만 삭제 가능합니다.\n\n**관련 유스케이스**: UC-10\n\n**삭제 조건**: 연결된 할일이 없는 사용자 정의 카테고리만 삭제 가능\n\n**BR-10**: 할일이 연결된 카테고리 삭제 불가 → 409 반환 (DB: ON DELETE RESTRICT)\n\n**기본 카테고리 보호**: isDefault=true인 카테고리는 삭제 불가 → 403 반환\n\n**접근 제한**: 본인 소유 카테고리만 삭제 가능 → 타인 카테고리 접근 시 403 반환\n\n**관련 시나리오**: SCN-10 (정상), SCN-22 (할일 연결된 카테고리), SCN-23 (기본 카테고리 삭제 시도)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CategoryId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "카테고리 삭제 성공. 응답 본문 없음."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Access Token을 Bearer 스킴으로 전달합니다. 로그인(`POST /api/auth/login`) 후 발급받은 `accessToken` 값을 사용합니다.\n\n**형식**: `Authorization: Bearer {accessToken}`\n\n**만료 시간**: 1시간 (1h)\n\n**저장 방식**: 클라이언트는 Zustand 메모리(authStore)에 저장합니다."
+      }
+    },
+    "parameters": {
+      "TodoId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "할일 고유 식별자 (UUID)",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "f1e2d3c4-b5a6-7890-1234-567890abcdef"
+      },
+      "CategoryId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "카테고리 고유 식별자 (UUID)",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "description": "사용자 정보 스키마. 비밀번호(password)는 응답에서 항상 제외됩니다.",
+        "required": ["id", "email", "name", "createdAt", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "사용자 고유 식별자 (PK)",
+            "example": "550b280a-d66d-46c2-9f34-ac3b12345678"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255,
+            "description": "로그인 이메일. 변경 불가(BR-12).",
+            "example": "minjun@example.com"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "사용자 이름",
+            "example": "김민준"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "가입일시 (ISO 8601)",
+            "example": "2026-05-13T09:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "정보 수정일시 (ISO 8601)",
+            "example": "2026-05-13T09:00:00.000Z"
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "description": "카테고리 정보 스키마. userId가 null이면 시스템 기본 카테고리(BR-07), null이 아니면 사용자 정의 카테고리(BR-09).",
+        "required": ["id", "name", "isDefault", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "카테고리 고유 식별자 (PK)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "소유자 ID. null이면 시스템 기본 카테고리(BR-07), null이 아니면 사용자 정의 카테고리.",
+            "example": "550b280a-d66d-46c2-9f34-ac3b12345678"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "카테고리명",
+            "example": "사이드프로젝트"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "기본 카테고리 여부. true이면 userId는 항상 null.",
+            "example": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "생성일시 (ISO 8601)",
+            "example": "2026-05-13T10:00:00.000Z"
+          }
+        }
+      },
+      "Todo": {
+        "type": "object",
+        "description": "할일 정보 스키마.",
+        "required": ["id", "userId", "categoryId", "title", "isCompleted", "createdAt", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "할일 고유 식별자 (PK)",
+            "example": "f1e2d3c4-b5a6-7890-1234-567890abcdef"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "소유자 ID (BR-03: 사용자는 자신의 할일만 접근 가능)",
+            "example": "550b280a-d66d-46c2-9f34-ac3b12345678"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "카테고리 ID (BR-04: 할일 등록 시 카테고리 필수)",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "할일 제목",
+            "example": "팀 주간 업무 보고서 작성"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "할일 설명 (선택 입력, BR-05)",
+            "example": "매주 금요일 오후 5시 마감"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "종료 예정일 (선택 입력, BR-05, ISO 8601 date 형식: YYYY-MM-DD)",
+            "example": "2026-05-17"
+          },
+          "isCompleted": {
+            "type": "boolean",
+            "description": "완료 여부. 기본값 false. 완료 후 취소 가능(BR-06).",
+            "example": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "등록일시 (ISO 8601)",
+            "example": "2026-05-13T09:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "수정일시 (ISO 8601)",
+            "example": "2026-05-13T09:30:00.000Z"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "description": "회원가입 요청 스키마 (UC-01)",
+        "required": ["email", "password", "name"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255,
+            "description": "가입할 이메일 주소. 중복 불가.",
+            "example": "minjun@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "description": "비밀번호. 최소 8자 이상 필수. 서버에서 bcrypt(saltRounds:12)로 해시 저장.",
+            "example": "securePass1!"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "사용자 이름",
+            "example": "김민준"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "로그인 요청 스키마 (UC-02)",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "가입된 이메일 주소",
+            "example": "minjun@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "비밀번호",
+            "example": "securePass1!"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "description": "인증 성공 응답 스키마 (회원가입/로그인 공통). accessToken의 만료 시간은 1시간(1h)입니다.",
+        "required": ["accessToken", "user"],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT Access Token. 만료 시간 1h. 인증이 필요한 모든 API 요청 시 Authorization 헤더에 포함해야 합니다.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1NTBiMjgwYS1kNjZkLTQ2YzItOWYzNC1hYzNiMTIzNDU2NzgiLCJpYXQiOjE3MTU1NjgwMDAsImV4cCI6MTcxNTU3MTYwMH0.example"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "description": "내 정보 수정 요청 스키마 (UC-03). 이메일 수정은 BR-12에 의해 불가합니다. name과 password 중 최소 하나는 포함해야 합니다.",
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "변경할 이름 (선택)",
+            "example": "민준킴"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "description": "변경할 비밀번호 (선택). 최소 8자 이상 필수.",
+            "example": "newPassword123!"
+          }
+        }
+      },
+      "CreateTodoRequest": {
+        "type": "object",
+        "description": "할일 등록 요청 스키마 (UC-04). 등록 후 isCompleted는 항상 false로 초기화됩니다.",
+        "required": ["title", "categoryId"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "할일 제목 (필수, BR-04)",
+            "example": "팀 주간 업무 보고서 작성"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "카테고리 ID (필수, BR-04). 존재하지 않는 categoryId 지정 시 400 반환.",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "description": {
+            "type": "string",
+            "description": "할일 설명 (선택, BR-05)",
+            "example": "매주 금요일 오후 5시 마감"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "description": "종료 예정일 (선택, BR-05, YYYY-MM-DD)",
+            "example": "2026-05-17"
+          }
+        }
+      },
+      "UpdateTodoRequest": {
+        "type": "object",
+        "description": "할일 수정 요청 스키마 (UC-05). 포함된 필드만 업데이트됩니다. 완료 상태에서도 수정 가능(BR-06). 최소 하나의 필드를 포함해야 합니다.",
+        "minProperties": 1,
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "변경할 할일 제목 (선택)",
+            "example": "주간 보고서 작성 (수정)"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "변경할 카테고리 ID (선택). 존재하지 않는 categoryId 지정 시 400 반환.",
+            "example": "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "변경할 할일 설명 (선택). null 전달 시 설명 제거.",
+            "example": "다음 주 월요일 오전까지로 변경"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "변경할 종료 예정일 (선택, YYYY-MM-DD). null 전달 시 마감일 제거.",
+            "example": "2026-05-18"
+          }
+        }
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "description": "사용자 정의 카테고리 추가 요청 스키마 (UC-09)",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "카테고리명 (필수). 동일 사용자 내 중복 불가.",
+            "example": "사이드프로젝트"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "표준 에러 응답 스키마. 모든 에러 응답은 이 형식을 따릅니다.",
+        "required": ["status", "message"],
+        "properties": {
+          "status": {
+            "type": "integer",
+            "description": "HTTP 상태 코드",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "description": "에러 메시지 (사용자에게 표시 가능한 내용)",
+            "example": "제목은 필수입니다."
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "잘못된 요청 (유효성 검사 실패). 필수값 누락, 형식 오류, 비밀번호 8자 미만, 존재하지 않는 categoryId 등.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "필수값 누락": {
+                "summary": "카테고리 누락 (SCN-17)",
+                "value": {
+                  "status": 400,
+                  "message": "카테고리를 선택해 주세요."
+                }
+              },
+              "비밀번호 정책 위반": {
+                "summary": "비밀번호 8자 미만 (SCN-13)",
+                "value": {
+                  "status": 400,
+                  "message": "비밀번호는 최소 8자 이상이어야 합니다."
+                }
+              },
+              "이메일 형식 오류": {
+                "summary": "이메일 형식 불일치",
+                "value": {
+                  "status": 400,
+                  "message": "유효한 이메일 형식이 아닙니다."
+                }
+              },
+              "존재하지 않는 카테고리": {
+                "summary": "categoryId가 존재하지 않음",
+                "value": {
+                  "status": 400,
+                  "message": "존재하지 않는 카테고리입니다."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "인증 실패. JWT 토큰이 없거나 유효하지 않거나 만료되었습니다. 또는 이메일/비밀번호 불일치.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "미인증 요청": {
+                "summary": "Authorization 헤더 없음 또는 JWT 만료 (SCN-16, SCN-24)",
+                "value": {
+                  "status": 401,
+                  "message": "인증이 필요합니다."
+                }
+              },
+              "로그인 실패": {
+                "summary": "이메일 없음 또는 비밀번호 불일치 (SCN-14, SCN-15)",
+                "value": {
+                  "status": 401,
+                  "message": "이메일 또는 비밀번호가 올바르지 않습니다."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "접근 권한 없음. 타인 리소스 접근 시도, 또는 기본 카테고리 삭제 시도.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "타인 할일 접근": {
+                "summary": "타인 소유 할일 수정/삭제/완료 시도 (SCN-18, SCN-20)",
+                "value": {
+                  "status": 403,
+                  "message": "접근 권한이 없습니다."
+                }
+              },
+              "기본 카테고리 삭제 시도": {
+                "summary": "isDefault=true인 카테고리 삭제 시도 (SCN-23)",
+                "value": {
+                  "status": 403,
+                  "message": "기본 카테고리는 삭제할 수 없습니다."
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "리소스를 찾을 수 없음. 존재하지 않는 할일 또는 카테고리 ID.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "존재하지 않는 할일": {
+                "summary": "삭제됐거나 없는 할일 ID (SCN-19)",
+                "value": {
+                  "status": 404,
+                  "message": "존재하지 않는 할일입니다."
+                }
+              },
+              "존재하지 않는 카테고리": {
+                "summary": "없는 카테고리 ID",
+                "value": {
+                  "status": 404,
+                  "message": "존재하지 않는 카테고리입니다."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "충돌. 중복 이메일, 중복 카테고리명, 또는 연결된 할일이 있는 카테고리 삭제 시도.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "중복 이메일": {
+                "summary": "이미 가입된 이메일 (SCN-12)",
+                "value": {
+                  "status": 409,
+                  "message": "이미 사용 중인 이메일입니다."
+                }
+              },
+              "중복 카테고리명": {
+                "summary": "동일 사용자 내 중복 카테고리명 (SCN-21)",
+                "value": {
+                  "status": 409,
+                  "message": "이미 존재하는 카테고리명입니다."
+                }
+              },
+              "할일 연결된 카테고리 삭제": {
+                "summary": "할일이 연결된 카테고리 삭제 시도 (SCN-22, BR-10)",
+                "value": {
+                  "status": 409,
+                  "message": "해당 카테고리에 연결된 할일이 있어 삭제할 수 없습니다."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
