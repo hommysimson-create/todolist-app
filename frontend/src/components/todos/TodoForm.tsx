@@ -143,7 +143,9 @@ export function TodoForm({ isOpen, onClose, categories, initialData, onSubmit, i
           >
             <option value="">{t('todoForm.category.placeholder')}</option>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+              <option key={cat.id} value={cat.id}>
+                {cat.isDefault ? t(`category.default.${cat.name}`, { defaultValue: cat.name }) : cat.name}
+              </option>
             ))}
           </select>
           {categoryError && (

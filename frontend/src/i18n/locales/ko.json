@@ -108,6 +108,12 @@
   "filter.apply": "적용",
   "filter.reset": "초기화",
 
+  "category.default.업무": "업무",
+  "category.default.개인": "개인",
+  "category.default.쇼핑": "쇼핑",
+  "category.default.건강": "건강",
+  "category.default.학습": "학습",
+
   "categories.title": "카테고리 관리",
   "categories.addNew": "새 카테고리 추가",
   "categories.add.title": "새 카테고리 추가",

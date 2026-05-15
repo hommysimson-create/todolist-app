@@ -81,7 +81,7 @@ export function CategoryPage() {
                 <li key={cat.id} className="category-page__item">
                   <div className="category-page__item-info">
                     <span className="category-page__badge">{t('categories.default')}</span>
-                    <span className="category-page__name">{cat.name}</span>
+                    <span className="category-page__name">{t(`category.default.${cat.name}`, { defaultValue: cat.name })}</span>
                   </div>
                   <Button variant="danger" disabled>{t('categories.delete')}</Button>
                 </li>

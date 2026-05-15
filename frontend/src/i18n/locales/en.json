@@ -108,6 +108,12 @@
   "filter.apply": "Apply",
   "filter.reset": "Reset",
 
+  "category.default.업무": "Work",
+  "category.default.개인": "Personal",
+  "category.default.쇼핑": "Shopping",
+  "category.default.건강": "Health",
+  "category.default.학습": "Study",
+
   "categories.title": "Category Management",
   "categories.addNew": "Add New Category",
   "categories.add.title": "Add New Category",

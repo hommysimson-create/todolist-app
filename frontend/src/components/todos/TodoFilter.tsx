@@ -56,7 +56,9 @@ export function TodoFilter({ categories, filters, onApply, onReset }: TodoFilter
           >
             <option value="">{t('filter.category.all')}</option>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+              <option key={cat.id} value={cat.id}>
+                {cat.isDefault ? t(`category.default.${cat.name}`, { defaultValue: cat.name }) : cat.name}
+              </option>
             ))}
           </select>
         </div>
@@ -70,7 +72,7 @@ export function TodoFilter({ categories, filters, onApply, onReset }: TodoFilter
             name="startDate"
             value={local.startDate ?? ''}
             onChange={handleChange}
-            lang={i18n.language}
+            lang={i18n.language === 'en' ? 'en-US' : i18n.language}
           />
         </div>
 
@@ -83,7 +85,7 @@ export function TodoFilter({ categories, filters, onApply, onReset }: TodoFilter
             name="endDate"
             value={local.endDate ?? ''}
             onChange={handleChange}
-            lang={i18n.language}
+            lang={i18n.language === 'en' ? 'en-US' : i18n.language}
           />
         </div>
       </div>

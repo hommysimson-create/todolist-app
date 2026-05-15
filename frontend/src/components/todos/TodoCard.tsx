@@ -14,7 +14,9 @@ interface TodoCardProps {
 
 export function TodoCard({ todo, category, onComplete, onEdit, onDelete }: TodoCardProps) {
   const { t } = useTranslation()
-  const categoryName = category?.name ?? t('todoCard.uncategorized')
+  const categoryName = category
+    ? (category.isDefault ? t(`category.default.${category.name}`, { defaultValue: category.name }) : category.name)
+    : t('todoCard.uncategorized')
 
   return (
     <div className={`todo-card${todo.isCompleted ? ' todo-card--completed' : ''}`}>
