@@ -80,13 +80,26 @@ export function TodoForm({ isOpen, onClose, categories, initialData, onSubmit, i
     e.preventDefault()
     if (!validate()) return
 
-    const data: CreateTodoInput | UpdateTodoInput = {
-      title: form.title.trim(),
-      categoryId: form.categoryId,
-      description: form.description.trim() || undefined,
-      dueDate: form.dueDate || undefined,
+    const desc = form.description.trim()
+    const due = form.dueDate
+
+    if (isEditMode) {
+      const data: UpdateTodoInput = {
+        title: form.title.trim(),
+        categoryId: form.categoryId,
+        description: desc || null,
+        dueDate: due || null,
+      }
+      onSubmit(data)
+    } else {
+      const data: CreateTodoInput = {
+        title: form.title.trim(),
+        categoryId: form.categoryId,
+        ...(desc ? { description: desc } : {}),
+        ...(due ? { dueDate: due } : {}),
+      }
+      onSubmit(data)
     }
-    onSubmit(data)
   }
 
   return (

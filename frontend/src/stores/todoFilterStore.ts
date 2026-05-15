@@ -7,12 +7,7 @@ interface TodoFilterState extends TodoFilters {
   getFilters: () => TodoFilters
 }
 
-const initialFilters: TodoFilters = {
-  categoryId: undefined,
-  startDate: undefined,
-  endDate: undefined,
-  isCompleted: undefined,
-}
+const initialFilters: TodoFilters = {}
 
 export const useTodoFilterStore = create<TodoFilterState>((set, get) => ({
   ...initialFilters,

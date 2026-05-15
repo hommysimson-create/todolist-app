@@ -22,7 +22,12 @@ export function TodoListPage() {
   const [editTarget, setEditTarget] = useState<Todo | undefined>()
 
   const { categoryId, startDate, endDate, isCompleted, setFilter, resetFilter } = useTodoFilterStore()
-  const filters: TodoFilters = { categoryId, startDate, endDate, isCompleted }
+  const filters: TodoFilters = {
+    ...(categoryId !== undefined ? { categoryId } : {}),
+    ...(startDate !== undefined ? { startDate } : {}),
+    ...(endDate !== undefined ? { endDate } : {}),
+    ...(isCompleted !== undefined ? { isCompleted } : {}),
+  }
 
   const { data: todos = [], isLoading, isError } = useTodos(filters)
   const { data: categories = [] } = useCategories()
@@ -108,7 +113,7 @@ export function TodoListPage() {
         isOpen={formOpen}
         onClose={handleClose}
         categories={categories}
-        initialData={editTarget}
+        {...(editTarget ? { initialData: editTarget } : {})}
         onSubmit={handleSubmit}
         isLoading={createTodo.isPending || updateTodo.isPending}
       />

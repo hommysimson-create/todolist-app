@@ -19,10 +19,15 @@ export function TodoFilter({ categories, filters, onApply, onReset }: TodoFilter
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target
     if (name === 'isCompleted') {
-      setLocal((prev) => ({
-        ...prev,
-        isCompleted: value === '' ? undefined : value === 'true',
-      }))
+      setLocal((prev) => {
+        const next = { ...prev }
+        if (value === '') {
+          delete next.isCompleted
+        } else {
+          next.isCompleted = value === 'true'
+        }
+        return next
+      })
     } else {
       setLocal((prev) => ({ ...prev, [name]: value || undefined }))
     }

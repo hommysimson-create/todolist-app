@@ -31,7 +31,7 @@ export function TodoList({ todos, categories, onComplete, onEdit, onDelete }: To
           <li key={todo.id} className="todo-list__item">
             <TodoCard
               todo={todo}
-              category={category}
+              {...(category ? { category } : {})}
               onComplete={onComplete}
               onEdit={onEdit}
               onDelete={onDelete}
