@@ -1,6 +1,6 @@
 # TodoListApp 프로젝트 구조 설계 원칙
 
-- 버전: 1.0.0
+- 버전: 1.0.4
 - 작성일: 2026-05-13
 - 참조 문서:
   - `1-domain-definition.md` — 도메인 모델 및 비즈니스 규칙
@@ -15,6 +15,8 @@
 |-------|------------|-----------|----------|
 | 1.0.0 | 2026-05-13 | 최초 작성 | aliceKim |
 | 1.0.1 | 2026-05-13 | 백엔드 레이어에 Express·PostgreSQL 17 버전 명시, JWT 만료 정책·비밀번호 8자 검증 추가, 인증 전략 패턴 섹션 추가 | aliceKim |
+| 1.0.4 | 2026-05-14 | 실제 구현 반영: requestLogger.js 인라인 처리, routes/index.js 미생성, db/config.js 추가, 테스트 파일 구조 현행화, 로깅 설명 수정 | aliceKim |
+| 1.0.3 | 2026-05-13 | 백엔드 언어를 TypeScript → JavaScript로 변경: types/ 디렉토리 제거, .ts → .js, tsconfig 제거 | aliceKim |
 | 1.0.2 | 2026-05-13 | JWT 저장 방식을 Zustand 메모리 저장으로 변경, storage.ts 제거, 토큰 저장 방식 섹션 추가 | aliceKim |
 
 ---
@@ -31,7 +33,7 @@
 
 5. **명시적 에러 처리 (Explicit Error Handling)**: 모든 비동기 작업은 try/catch 또는 Promise 에러 핸들러로 감싸고, 에러는 반드시 중앙 에러 미들웨어까지 전파한다.
 
-6. **불변 인터페이스 (Stable Interfaces)**: 레이어 간 데이터 교환은 TypeScript 타입/인터페이스로 명시적으로 정의하며, `any` 타입 사용을 금지한다.
+6. **명시적 인터페이스 (Stable Interfaces)**: 백엔드는 JSDoc 주석으로 입출력 타입을 문서화한다. 프론트엔드는 TypeScript 타입/인터페이스로 명시적으로 정의하며 `any` 타입 사용을 금지한다.
 
 7. **ORM 금지, Raw SQL 직접 사용**: DB 접근은 `pg` 라이브러리로만 수행하며, 모든 SQL은 파라미터화된 쿼리(`$1, $2, ...`)를 사용하여 SQL Injection을 방지한다.
 
@@ -115,12 +117,12 @@ graph TD
 
 | 구분 | 규칙 | 예시 |
 |---|---|---|
-| 백엔드 소스 파일 | `camelCase` | `todoService.ts`, `authController.ts` |
-| 프론트엔드 컴포넌트 | `PascalCase` | `TodoCard.tsx`, `CategoryFilter.tsx` |
-| 프론트엔드 Hook | `camelCase`, `use` 접두사 | `useTodos.ts`, `useAuth.ts` |
+| 백엔드 소스 파일 | `camelCase`, `.js` 확장자 | `todoService.js`, `authController.js` |
+| 백엔드 테스트 파일 | 대상 파일명 + `.test.js` | `todoService.test.js` |
+| 프론트엔드 컴포넌트 | `PascalCase`, `.tsx` 확장자 | `TodoCard.tsx`, `CategoryFilter.tsx` |
+| 프론트엔드 Hook | `camelCase`, `use` 접두사, `.ts` | `useTodos.ts`, `useAuth.ts` |
 | 프론트엔드 API 모듈 | `camelCase`, `Api` 접미사 | `todoApi.ts`, `authApi.ts` |
-| 타입 정의 파일 | `camelCase`, `.types.ts` 접미사 | `todo.types.ts`, `auth.types.ts` |
-| 테스트 파일 | 대상 파일명 + `.test.ts(x)` | `todoService.test.ts` |
+| 프론트엔드 타입 정의 | `camelCase`, `.types.ts` 접미사 | `todo.types.ts`, `auth.types.ts` |
 
 ### 변수명 / 함수명
 
@@ -164,7 +166,7 @@ graph TD
 ### 품질 게이트
 
 - PR 병합 전 모든 테스트가 통과해야 한다.
-- TypeScript 컴파일 에러가 없어야 한다 (`tsc --noEmit` 통과).
+- 프론트엔드: TypeScript 컴파일 에러가 없어야 한다 (`tsc --noEmit` 통과).
 - ESLint 경고 0건을 유지한다.
 - 테스트 커버리지가 80% 미만이면 병합을 차단한다.
 
@@ -187,9 +189,9 @@ graph TD
 
 ### 로깅
 
-- 모든 HTTP 요청/응답은 구조화된 JSON 형식으로 기록한다 (요청 메서드, 경로, 상태코드, 소요 시간).
-- 에러 로그에는 스택 트레이스를 포함하되, 응답 본문에는 노출하지 않는다.
-- 운영 환경에서는 `info` 레벨 이상, 개발 환경에서는 `debug` 레벨 이상을 출력한다.
+- 모든 HTTP 요청/응답은 `[REQ] METHOD URL → STATUS (소요ms)` 형식으로 기록한다. `app.js`의 `res.on('finish')` 콜백에서 처리한다.
+- 에러 로그에는 스택 트레이스를 포함하되, 응답 본문에는 노출하지 않는다. (`errorHandler.js`의 `console.error` 처리)
+- `NODE_ENV=test` 환경에서는 요청 로그를 출력하지 않아 테스트 결과를 깔끔하게 유지한다.
 
 ### 에러 처리
 
@@ -225,77 +227,76 @@ graph TD
 
 ## 6. 백엔드 디렉토리 구조
 
-`server/` 디렉토리를 루트로 한다.
+`backend/` 디렉토리를 루트로 한다.
 
 ```
-server/
+backend/
 ├── src/
 │   ├── routes/                   # Express 라우터 정의 (URL 매핑만 담당)
-│   │   ├── index.ts              # 전체 라우터 집합 및 /api prefix 등록
-│   │   ├── authRoutes.ts         # POST /api/auth/register, POST /api/auth/login
-│   │   ├── userRoutes.ts         # GET/PATCH/DELETE /api/users/me
-│   │   ├── todoRoutes.ts         # GET/POST/PATCH/DELETE /api/todos, PATCH /api/todos/:id/complete
-│   │   └── categoryRoutes.ts     # GET/POST/DELETE /api/categories, DELETE /api/categories/:id
+│   │   ├── authRoutes.js         # POST /api/auth/register, POST /api/auth/login
+│   │   ├── userRoutes.js         # GET/PATCH/DELETE /api/users/me
+│   │   ├── todoRoutes.js         # GET/POST/PATCH/DELETE /api/todos, PATCH /api/todos/:id/complete
+│   │   └── categoryRoutes.js     # GET/POST/DELETE /api/categories, DELETE /api/categories/:id
+│   │                             # ※ routes/index.js 미생성 — 라우터는 app.js에서 직접 등록
 │   │
 │   ├── controllers/              # 요청/응답 처리, 입력값 검증, HTTP 상태코드 결정
-│   │   ├── authController.ts     # register, login 핸들러
-│   │   ├── userController.ts     # getMe, updateMe, deleteMe 핸들러
-│   │   ├── todoController.ts     # getTodos, createTodo, updateTodo, deleteTodo, completeTodo 핸들러
-│   │   └── categoryController.ts # getCategories, createCategory, deleteCategory 핸들러
+│   │   ├── authController.js     # register, login 핸들러
+│   │   ├── userController.js     # getMe, updateMe, deleteMe 핸들러
+│   │   ├── todoController.js     # getTodos, createTodo, updateTodo, deleteTodo, toggleTodoComplete 핸들러
+│   │   └── categoryController.js # getCategories, createCategory, deleteCategory 핸들러
 │   │
 │   ├── services/                 # 비즈니스 로직, 도메인 규칙 적용, 트랜잭션 조율
-│   │   ├── authService.ts        # 회원가입(비밀번호 해시), 로그인(bcrypt 검증), JWT 발급
-│   │   ├── userService.ts        # 내 정보 조회/수정, 회원 탈퇴(CASCADE 처리)
-│   │   ├── todoService.ts        # 할일 CRUD, 소유권 검사, 완료 여부 토글
-│   │   └── categoryService.ts    # 카테고리 조회/추가/삭제, 기본 카테고리 보호 규칙
+│   │   ├── authService.js        # 회원가입(비밀번호 해시), 로그인(bcrypt 검증), JWT 발급
+│   │   ├── userService.js        # 내 정보 조회/수정, 회원 탈퇴(CASCADE 처리)
+│   │   ├── todoService.js        # 할일 CRUD, 소유권 검사, 완료 여부 토글
+│   │   └── categoryService.js    # 카테고리 조회/추가/삭제, 기본 카테고리 보호 규칙
 │   │
-│   ├── repositories/             # SQL 쿼리 실행, pg Pool 사용, DB 결과 → 타입 매핑
-│   │   ├── userRepository.ts     # users 테이블 CRUD 쿼리
-│   │   ├── todoRepository.ts     # todos 테이블 CRUD + 필터 쿼리
-│   │   └── categoryRepository.ts # categories 테이블 CRUD 쿼리
+│   ├── repositories/             # SQL 쿼리 실행, pg Pool 사용, DB 결과 → 객체 매핑
+│   │   ├── userRepository.js     # users 테이블 CRUD 쿼리
+│   │   ├── todoRepository.js     # todos 테이블 CRUD + 필터 쿼리
+│   │   └── categoryRepository.js # categories 테이블 CRUD 쿼리
 │   │
 │   ├── middlewares/              # Express 미들웨어 (횡단 관심사)
-│   │   ├── authenticate.ts       # JWT 검증, req.user 주입
-│   │   ├── errorHandler.ts       # 중앙 에러 처리, 표준 JSON 에러 응답
-│   │   └── requestLogger.ts      # HTTP 요청/응답 구조화 로깅
+│   │   ├── authenticate.js       # JWT 검증, req.user 주입
+│   │   └── errorHandler.js       # 중앙 에러 처리, 표준 JSON 에러 응답
+│   │                             # ※ requestLogger.js 미생성 — 요청 로깅은 app.js 인라인 처리
 │   │
-│   ├── db/                       # PostgreSQL 연결 풀 및 DB 초기화
-│   │   ├── pool.ts               # pg.Pool 인스턴스 생성 및 export
-│   │   ├── migrations/           # SQL 마이그레이션 파일 (순번 prefix)
-│   │   │   ├── 001_create_users.sql
-│   │   │   ├── 002_create_categories.sql
-│   │   │   └── 003_create_todos.sql
-│   │   └── seeds/                # 초기 데이터 (기본 카테고리 등)
-│   │       └── defaultCategories.sql
-│   │
-│   ├── types/                    # TypeScript 타입/인터페이스 정의
-│   │   ├── auth.types.ts         # RegisterInput, LoginInput, JwtPayload
-│   │   ├── user.types.ts         # User, UpdateUserInput
-│   │   ├── todo.types.ts         # Todo, CreateTodoInput, UpdateTodoInput, TodoFilter
-│   │   ├── category.types.ts     # Category, CreateCategoryInput
-│   │   └── express.d.ts          # req.user 타입 확장 선언
+│   ├── db/                       # PostgreSQL 연결 풀 및 설정
+│   │   ├── config.js             # dotenv 로드, NODE_ENV 기반 DB_NAME 분기
+│   │   └── pool.js               # pg.Pool 인스턴스 생성 및 export
+│   │                             # ※ migrations/, seeds/ 미생성 — DDL은 database/schema.sql 사용
 │   │
 │   └── utils/                    # 재사용 가능한 순수 유틸 함수
-│       ├── jwt.ts                # JWT 생성(sign) 및 검증(verify) 래퍼
-│       ├── hash.ts               # bcrypt 해시 생성 및 비교 래퍼
-│       └── validate.ts           # 공통 입력값 검증 헬퍼 함수
+│       ├── jwt.js                # JWT 생성(sign) 및 검증(verify) 래퍼
+│       ├── hash.js               # bcrypt 해시 생성 및 비교 래퍼
+│       └── validate.js           # 공통 입력값 검증 헬퍼 함수
 │
-├── tests/                        # 테스트 파일 (src/ 구조와 동일하게 미러링)
-│   ├── unit/
-│   │   ├── authService.test.ts
-│   │   ├── todoService.test.ts
-│   │   └── categoryService.test.ts
-│   └── integration/
-│       ├── auth.test.ts          # POST /api/auth/* 통합 테스트
-│       ├── todos.test.ts         # /api/todos/* 통합 테스트
-│       └── categories.test.ts    # /api/categories/* 통합 테스트
+├── tests/                        # 테스트 파일
+│   ├── helpers/                  # 테스트 공통 유틸
+│   │   ├── globalSetup.js        # 테스트 전 DB 연결 확인
+│   │   └── truncate.js           # 테이블 초기화 헬퍼 (TRUNCATE users CASCADE)
+│   ├── unit/                     # 단위 테스트 (utils, middlewares)
+│   │   ├── validate.test.js
+│   │   ├── jwt.test.js
+│   │   ├── hash.test.js
+│   │   ├── authenticate.test.js
+│   │   └── errorHandler.test.js
+│   └── integration/              # 통합 테스트 (API 엔드포인트)
+│       ├── auth.register.test.js # POST /api/auth/register
+│       ├── auth.login.test.js    # POST /api/auth/login
+│       ├── auth.jwt.test.js      # JWT 만료 시나리오
+│       ├── auth.test.js          # 인증 API 종합
+│       ├── users.test.js         # /api/users/* 통합 테스트
+│       ├── todos.test.js         # /api/todos/* 통합 테스트
+│       ├── categories.test.js    # /api/categories/* 통합 테스트
+│       └── app.smoke.test.js     # 앱 구동 및 라우팅 스모크 테스트
 │
 ├── .env                          # 환경 변수 (gitignore 대상)
 ├── .env.example                  # 환경 변수 키 목록 및 설명 (버전 관리 포함)
 ├── .gitignore
+├── jest.config.js                # 테스트 환경, 커버리지 임계값(80%) 설정
 ├── package.json
-├── tsconfig.json
-└── app.ts                        # Express 앱 생성, 미들웨어/라우터 등록, 서버 시작
+└── app.js                        # Express 앱 생성, 미들웨어/라우터/Swagger UI 등록, 서버 시작
 ```
 
 ### 주요 디렉토리 역할 요약
@@ -305,20 +306,19 @@ server/
 | `routes/` | URL 경로와 컨트롤러 핸들러를 연결한다. 미들웨어 체인 순서도 여기서 정의한다. |
 | `controllers/` | HTTP 요청을 파싱하고 서비스 결과를 HTTP 응답으로 변환한다. 비즈니스 로직을 포함하지 않는다. |
 | `services/` | 도메인 비즈니스 규칙을 구현한다. 여러 Repository를 조합하여 트랜잭션을 조율할 수 있다. |
-| `repositories/` | 파라미터화된 SQL을 실행하고, DB 결과 행(Row)을 TypeScript 타입으로 변환한다. |
+| `repositories/` | 파라미터화된 SQL을 실행하고, DB 결과 행(Row)을 JavaScript 객체로 반환한다. |
 | `middlewares/` | 인증, 로깅, 에러 처리 등 요청 처리 파이프라인의 횡단 관심사를 담당한다. |
 | `db/` | pg Pool 인스턴스를 싱글톤으로 관리하고, 마이그레이션/시드 SQL 파일을 보관한다. |
-| `types/` | 프로젝트 전체에서 공유하는 TypeScript 타입과 인터페이스를 정의한다. |
 | `utils/` | 특정 레이어에 종속되지 않는 순수 함수(JWT, bcrypt, 검증 등)를 제공한다. |
 
 ---
 
 ## 7. 프론트엔드 디렉토리 구조
 
-`client/` 디렉토리를 루트로 한다.
+`frontend/` 디렉토리를 루트로 한다.
 
 ```
-client/
+frontend/
 ├── src/
 │   ├── pages/                    # 라우트 단위 화면 컴포넌트 (레이아웃 + 데이터 페칭 조율)
 │   │   ├── auth/

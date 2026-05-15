@@ -1,6 +1,6 @@
 # TodoListApp 기술 아키텍처 다이어그램
 
-- 버전: 1.0.0
+- 버전: 1.0.4
 - 작성일: 2026-05-13
 - 참조 문서:
   - `1-domain-definition.md` — 도메인 모델 및 엔티티 관계
@@ -11,12 +11,13 @@
 
 ## 변경 이력
 
-| 버전  | 변경일     | 변경 내용 | 변경자   |
-|-------|------------|-----------|----------|
-| 1.0.0 | 2026-05-13 | 최초 작성 | aliceKim |
-| 1.0.1 | 2026-05-13 | 4. 인증 흐름 다이어그램 추가 | aliceKim |
+| 버전  | 변경일     | 변경 내용                                                                          | 변경자   |
+| ----- | ---------- | ---------------------------------------------------------------------------------- | -------- |
+| 1.0.0 | 2026-05-13 | 최초 작성                                                                          | aliceKim |
+| 1.0.1 | 2026-05-13 | 4. 인증 흐름 다이어그램 추가                                                       | aliceKim |
 | 1.0.2 | 2026-05-13 | 시스템 아키텍처에 HTTPS 명시, 인증 흐름에 비밀번호 8자 검증·JWT 만료 시간(1h) 추가 | aliceKim |
-| 1.0.3 | 2026-05-13 | 인증 흐름에 Zustand 메모리 저장 명시 (localStorage·Cookie 미사용) | aliceKim |
+| 1.0.4 | 2026-05-14 | ERD에 누락 필드 추가: User.updatedAt, Category.createdAt, Todo.description·updatedAt | aliceKim |
+| 1.0.3 | 2026-05-13 | 인증 흐름에 Zustand 메모리 저장 명시 (localStorage·Cookie 미사용)                  | aliceKim |
 
 ---
 
@@ -92,13 +93,15 @@ erDiagram
         string password
         string name
         datetime createdAt
+        datetime updatedAt
     }
 
     Category {
         UUID id PK
-        UUID userId FK
+        UUID userId FK "nullable — null이면 기본 카테고리(BR-07)"
         string name
         boolean isDefault
+        datetime createdAt
     }
 
     Todo {
@@ -106,9 +109,11 @@ erDiagram
         UUID userId FK
         UUID categoryId FK
         string title
-        date dueDate
+        string description "nullable"
+        date dueDate "nullable"
         boolean isCompleted
         datetime createdAt
+        datetime updatedAt
     }
 
     User ||--o{ Todo : "소유"

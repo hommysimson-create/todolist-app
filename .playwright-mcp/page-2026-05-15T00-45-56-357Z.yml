@@ -1,0 +1,66 @@
+- generic [ref=e2]:
+  - banner [ref=e21]:
+    - generic [ref=e22]:
+      - link "홈으로" [ref=e23] [cursor=pointer]:
+        - /url: /todos
+        - text: TodoListApp
+      - navigation "TodoListApp" [ref=e24]:
+        - link "할일목록" [ref=e25] [cursor=pointer]:
+          - /url: /todos
+        - link "카테고리" [ref=e26] [cursor=pointer]:
+          - /url: /categories
+        - link "내정보" [ref=e27] [cursor=pointer]:
+          - /url: /profile
+        - combobox "언어 선택" [ref=e28] [cursor=pointer]:
+          - option "KO" [selected]
+          - option "EN"
+        - button "테마를 다크 모드로 변경" [ref=e29] [cursor=pointer]: 🌙
+        - button "로그아웃" [ref=e30] [cursor=pointer]
+  - main [ref=e31]:
+    - generic [ref=e263]:
+      - heading "카테고리 관리" [level=1] [ref=e264]
+      - generic [ref=e265]:
+        - heading "새 카테고리 추가" [level=2] [ref=e266]
+        - generic [ref=e267]:
+          - generic [ref=e269]:
+            - generic [ref=e270]: 카테고리명
+            - textbox "카테고리명" [ref=e271]:
+              - /placeholder: 카테고리명을 입력하세요
+          - button "추가" [ref=e272] [cursor=pointer]
+      - region "기본 카테고리" [ref=e273]:
+        - heading "기본 카테고리" [level=2] [ref=e274]
+        - list "기본 카테고리" [ref=e275]:
+          - listitem [ref=e276]:
+            - generic [ref=e277]:
+              - generic [ref=e278]: 기본
+              - generic [ref=e279]: 개인
+            - button "삭제" [disabled] [ref=e280]
+          - listitem [ref=e281]:
+            - generic [ref=e282]:
+              - generic [ref=e283]: 기본
+              - generic [ref=e284]: 건강
+            - button "삭제" [disabled] [ref=e285]
+          - listitem [ref=e286]:
+            - generic [ref=e287]:
+              - generic [ref=e288]: 기본
+              - generic [ref=e289]: 쇼핑
+            - button "삭제" [disabled] [ref=e290]
+          - listitem [ref=e291]:
+            - generic [ref=e292]:
+              - generic [ref=e293]: 기본
+              - generic [ref=e294]: 업무
+            - button "삭제" [disabled] [ref=e295]
+          - listitem [ref=e296]:
+            - generic [ref=e297]:
+              - generic [ref=e298]: 기본
+              - generic [ref=e299]: 학습
+            - button "삭제" [disabled] [ref=e300]
+      - region "사용자 정의 카테고리" [ref=e301]:
+        - heading "사용자 정의 카테고리" [level=2] [ref=e302]
+        - list "사용자 정의 카테고리" [ref=e303]:
+          - listitem [ref=e304]:
+            - generic [ref=e305]: 테스트카테고리
+            - button "삭제" [ref=e306] [cursor=pointer]
+      - alert [ref=e307]:
+        - generic [ref=e308]: ⚠
+        - generic [ref=e309]: 할일이 연결된 카테고리는 삭제할 수 없습니다.

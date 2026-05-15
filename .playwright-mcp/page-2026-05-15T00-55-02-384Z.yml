@@ -1,0 +1,29 @@
+- generic [ref=e4]:
+  - combobox "언어 선택" [ref=e6] [cursor=pointer]:
+    - option "KO" [selected]
+    - option "EN"
+  - heading "TodoListApp" [level=1] [ref=e7]
+  - heading "로그인" [level=2] [ref=e8]
+  - generic [ref=e9]:
+    - alert [ref=e24]:
+      - generic [ref=e25]: ⚠
+      - generic [ref=e26]: 이메일 또는 비밀번호가 올바르지 않습니다.
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - text: 이메일 주소 *
+        - generic [ref=e12]: 필수
+      - textbox "이메일 주소 필수" [ref=e13]:
+        - /placeholder: user@example.com
+        - text: scn15test@example.com
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - text: 비밀번호 *
+        - generic [ref=e16]: 필수
+      - textbox "비밀번호 필수" [ref=e17]:
+        - /placeholder: ••••••••
+        - text: wrongpassword!
+    - button "로그인" [ref=e18] [cursor=pointer]
+  - paragraph [ref=e19]:
+    - text: 계정이 없으신가요?
+    - link "가입하기" [ref=e20] [cursor=pointer]:
+      - /url: /register

@@ -1,0 +1,62 @@
+- generic [ref=e2]:
+  - banner [ref=e21]:
+    - generic [ref=e22]:
+      - link "홈으로" [ref=e23] [cursor=pointer]:
+        - /url: /todos
+        - text: TodoListApp
+      - navigation "TodoListApp" [ref=e24]:
+        - link "할일목록" [ref=e25] [cursor=pointer]:
+          - /url: /todos
+        - link "카테고리" [ref=e26] [cursor=pointer]:
+          - /url: /categories
+        - link "내정보" [ref=e27] [cursor=pointer]:
+          - /url: /profile
+        - combobox "언어 선택" [ref=e28] [cursor=pointer]:
+          - option "KO" [selected]
+          - option "EN"
+        - button "테마를 다크 모드로 변경" [ref=e29] [cursor=pointer]: 🌙
+        - button "로그아웃" [ref=e30] [cursor=pointer]
+  - main [ref=e31]:
+    - generic [ref=e159]:
+      - heading "카테고리 관리" [level=1] [ref=e160]
+      - generic [ref=e161]:
+        - heading "새 카테고리 추가" [level=2] [ref=e162]
+        - generic [ref=e163]:
+          - generic [ref=e165]:
+            - generic [ref=e166]: 카테고리명
+            - textbox "카테고리명" [ref=e167]:
+              - /placeholder: 카테고리명을 입력하세요
+              - text: 사이드프로젝트
+            - alert [ref=e204]: 이미 존재하는 카테고리 이름입니다.
+          - button "추가" [ref=e168] [cursor=pointer]
+      - region "기본 카테고리" [ref=e169]:
+        - heading "기본 카테고리" [level=2] [ref=e170]
+        - list "기본 카테고리" [ref=e171]:
+          - listitem [ref=e172]:
+            - generic [ref=e173]:
+              - generic [ref=e174]: 기본
+              - generic [ref=e175]: 개인
+            - button "삭제" [disabled] [ref=e176]
+          - listitem [ref=e177]:
+            - generic [ref=e178]:
+              - generic [ref=e179]: 기본
+              - generic [ref=e180]: 건강
+            - button "삭제" [disabled] [ref=e181]
+          - listitem [ref=e182]:
+            - generic [ref=e183]:
+              - generic [ref=e184]: 기본
+              - generic [ref=e185]: 쇼핑
+            - button "삭제" [disabled] [ref=e186]
+          - listitem [ref=e187]:
+            - generic [ref=e188]:
+              - generic [ref=e189]: 기본
+              - generic [ref=e190]: 업무
+            - button "삭제" [disabled] [ref=e191]
+          - listitem [ref=e192]:
+            - generic [ref=e193]:
+              - generic [ref=e194]: 기본
+              - generic [ref=e195]: 학습
+            - button "삭제" [disabled] [ref=e196]
+      - region "사용자 정의 카테고리" [ref=e197]:
+        - heading "사용자 정의 카테고리" [level=2] [ref=e198]
+        - paragraph [ref=e205]: 사용자 정의 카테고리가 없습니다.

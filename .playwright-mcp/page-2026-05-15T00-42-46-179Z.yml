@@ -1,0 +1,88 @@
+- generic [ref=e2]:
+  - banner [ref=e21]:
+    - generic [ref=e22]:
+      - link "홈으로" [ref=e23] [cursor=pointer]:
+        - /url: /todos
+        - text: TodoListApp
+      - navigation "TodoListApp" [ref=e24]:
+        - link "할일목록" [ref=e25] [cursor=pointer]:
+          - /url: /todos
+        - link "카테고리" [ref=e26] [cursor=pointer]:
+          - /url: /categories
+        - link "내정보" [ref=e27] [cursor=pointer]:
+          - /url: /profile
+        - combobox "언어 선택" [ref=e28] [cursor=pointer]:
+          - option "KO" [selected]
+          - option "EN"
+        - button "테마를 다크 모드로 변경" [ref=e29] [cursor=pointer]: 🌙
+        - button "로그아웃" [ref=e30] [cursor=pointer]
+  - main [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - heading "할일 목록" [level=1] [ref=e34]
+        - button "새 할일 추가" [ref=e35] [cursor=pointer]
+      - search "할일 필터" [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: 카테고리
+            - combobox "카테고리" [ref=e40]:
+              - option "전체" [selected]
+              - option "개인"
+              - option "건강"
+              - option "쇼핑"
+              - option "업무"
+              - option "학습"
+          - generic [ref=e41]:
+            - generic [ref=e42]: 시작일
+            - textbox "시작일" [ref=e43]
+          - generic [ref=e44]:
+            - generic [ref=e45]: 종료일
+            - textbox "종료일" [ref=e46]
+        - generic [ref=e47]:
+          - group "완료 여부" [ref=e48]:
+            - generic [ref=e49]: 완료 여부
+            - generic [ref=e50]:
+              - generic [ref=e51] [cursor=pointer]:
+                - radio "전체" [checked] [ref=e52]
+                - text: 전체
+              - generic [ref=e53] [cursor=pointer]:
+                - radio "미완료" [ref=e54]
+                - text: 미완료
+              - generic [ref=e55] [cursor=pointer]:
+                - radio "완료" [ref=e56]
+                - text: 완료
+          - generic [ref=e57]:
+            - button "적용" [ref=e58] [cursor=pointer]
+            - button "초기화" [ref=e59] [cursor=pointer]
+      - generic [ref=e61]: 할일이 없습니다. 새 할일을 추가해보세요!
+      - dialog "새 할일 추가" [ref=e62]:
+        - generic [ref=e63]:
+          - heading "새 할일 추가" [level=2] [ref=e64]
+          - button "닫기" [ref=e65] [cursor=pointer]: ×
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - text: 제목 *
+              - generic [ref=e70]: 필수
+            - textbox "제목 필수" [active] [ref=e71]:
+              - /placeholder: 할일 제목을 입력하세요
+              - text: 팀 주간 업무 보고서 작성
+          - generic [ref=e72]:
+            - generic [ref=e73]: 설명 (선택)
+            - textbox "상세 설명을 입력하세요" [ref=e74]
+          - generic [ref=e75]:
+            - generic [ref=e76]: 카테고리 *
+            - combobox [ref=e77] [cursor=pointer]:
+              - option "카테고리 선택"
+              - option "개인"
+              - option "건강"
+              - option "쇼핑"
+              - option "업무" [selected]
+              - option "학습"
+          - generic [ref=e78]:
+            - generic [ref=e79]: 종료 예정일
+            - textbox "종료 예정일" [ref=e80]
+            - paragraph [ref=e81]: (선택)
+          - generic [ref=e82]:
+            - button "등록" [ref=e83] [cursor=pointer]
+            - button "취소" [ref=e84] [cursor=pointer]

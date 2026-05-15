@@ -1,0 +1,105 @@
+.category-page {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.category-page__title {
+  font-size: var(--text-heading-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-6);
+}
+
+.category-page__add {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.category-page__add-title {
+  font-size: var(--text-heading-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-4);
+}
+
+.category-page__add-form {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.category-page__add-input {
+  flex: 1;
+}
+
+.category-page__section {
+  margin-bottom: var(--space-6);
+}
+
+.category-page__section-title {
+  font-size: var(--text-heading-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-3);
+}
+
+.category-page__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.category-page__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.category-page__item-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.category-page__name {
+  font-size: var(--text-body-md);
+  color: var(--color-text-primary);
+}
+
+.category-page__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-label);
+  font-weight: 500;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.category-page__empty {
+  font-size: var(--text-body-md);
+  color: var(--color-text-secondary);
+  padding: var(--space-4) 0;
+}
+
+@media (max-width: 768px) {
+  .category-page {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .category-page__add-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -1,0 +1,51 @@
+- generic [ref=e2]:
+  - banner [ref=e21]:
+    - generic [ref=e22]:
+      - link "홈으로" [ref=e23] [cursor=pointer]:
+        - /url: /todos
+        - text: TodoListApp
+      - navigation "TodoListApp" [ref=e24]:
+        - link "할일목록" [ref=e25] [cursor=pointer]:
+          - /url: /todos
+        - link "카테고리" [ref=e26] [cursor=pointer]:
+          - /url: /categories
+        - link "내정보" [ref=e27] [cursor=pointer]:
+          - /url: /profile
+        - combobox "언어 선택" [ref=e28] [cursor=pointer]:
+          - option "KO" [selected]
+          - option "EN"
+        - button "테마를 다크 모드로 변경" [ref=e29] [cursor=pointer]: 🌙
+        - button "로그아웃" [ref=e30] [cursor=pointer]
+  - main [ref=e31]:
+    - generic [ref=e310]:
+      - heading "내 정보 관리" [level=1] [ref=e311]
+      - generic [ref=e312]:
+        - generic [ref=e313]:
+          - generic [ref=e314]: 이메일
+          - textbox "이메일" [disabled] [ref=e315]: test.e2e@example.com
+        - generic [ref=e316]:
+          - generic [ref=e317]:
+            - text: 이름 *
+            - generic [ref=e318]: 필수
+          - textbox "이름 필수" [ref=e319]:
+            - /placeholder: 이름을 입력하세요
+            - text: 민준닉네임
+        - generic [ref=e320]:
+          - generic [ref=e321]: 새 비밀번호
+          - textbox "새 비밀번호" [ref=e322]:
+            - /placeholder: 변경할 비밀번호 (8자 이상)
+        - generic [ref=e323]:
+          - generic [ref=e324]: 테마 설정
+          - generic [ref=e325]:
+            - generic [ref=e326] [cursor=pointer]:
+              - radio "라이트 모드" [checked] [ref=e327]
+              - text: 라이트 모드
+            - generic [ref=e328] [cursor=pointer]:
+              - radio "다크 모드" [ref=e329]
+              - text: 다크 모드
+        - button "저장" [ref=e331] [cursor=pointer]
+      - separator [ref=e332]
+      - generic [ref=e333]:
+        - heading "위험 구역" [level=2] [ref=e334]
+        - paragraph [ref=e335]: 계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.
+        - button "회원 탈퇴" [ref=e336] [cursor=pointer]

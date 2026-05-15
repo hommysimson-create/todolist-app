@@ -18,11 +18,13 @@ CREATE TABLE users (
     email       VARCHAR(255)  NOT NULL,
     password    VARCHAR(255)  NOT NULL,
     name        VARCHAR(100)  NOT NULL,
+    theme       VARCHAR(10)   NOT NULL DEFAULT 'light',
     created_at  TIMESTAMP     NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMP     NOT NULL DEFAULT NOW(),
 
     CONSTRAINT users_pkey        PRIMARY KEY (id),
-    CONSTRAINT users_email_key   UNIQUE      (email)
+    CONSTRAINT users_email_key   UNIQUE      (email),
+    CONSTRAINT users_theme_check CHECK       (theme IN ('light', 'dark'))
 );
 
 -- =============================================================

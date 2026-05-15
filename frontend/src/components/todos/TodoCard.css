@@ -1,0 +1,83 @@
+.todo-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 150ms ease;
+}
+
+.todo-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-light);
+}
+
+.todo-card--completed {
+  background: var(--color-background);
+  opacity: 0.7;
+}
+
+.todo-card--completed .todo-card__title {
+  text-decoration: line-through;
+  color: var(--color-text-disabled);
+}
+
+.todo-card__checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--color-success);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.todo-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-card__title {
+  font-size: var(--text-heading-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-1);
+  word-break: break-word;
+}
+
+.todo-card__description {
+  font-size: var(--text-body-sm);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-2);
+  word-break: break-word;
+}
+
+.todo-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.todo-card__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-label);
+  font-weight: 500;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.todo-card__due {
+  font-size: var(--text-body-sm);
+  color: var(--color-text-secondary);
+}
+
+.todo-card__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
