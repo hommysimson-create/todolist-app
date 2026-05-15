@@ -67,6 +67,9 @@ web_modules/
 
 # Playwright MCP temp files
 .playwright-mcp/
+*.png
+*.jpeg
+*.jpg
 
 # dotenv environment variable files
 .env
