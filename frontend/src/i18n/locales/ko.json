@@ -17,7 +17,7 @@
   "header.logo": "TodoListApp",
 
   "login.title": "로그인",
-  "login.brand": "TodoListApp",
+  "login.brand": "할 일 목록 앱",
   "login.email.label": "이메일 주소",
   "login.email.placeholder": "user@example.com",
   "login.email.required": "이메일을 입력해주세요.",
